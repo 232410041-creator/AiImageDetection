@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Image Check</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.12.0/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8/dist/teachablemachine-image.min.js"></script>
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+* { box-sizing: border-box; }
+
+body {
+    font-family: 'Inter', sans-serif;
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    color: #e6f1eb;
+    background: linear-gradient(
+        to bottom,
+        #1b3a2c 0%,
+        #0f1f17 65%
+    );
+    overflow: hidden;
+}
+
+/* wavy texture overlay */
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='320'%3E%3Cpath d='M0 70 Q 80 45 160 70 T 320 70' fill='none' stroke='rgba(255,255,255,0.06)' stroke-width='2'/%3E%3Cpath d='M0 160 Q 80 135 160 160 T 320 160' fill='none' stroke='rgba(255,255,255,0.045)' stroke-width='2'/%3E%3Cpath d='M0 250 Q 80 225 160 250 T 320 250' fill='none' stroke='rgba(255,255,255,0.035)' stroke-width='2'/%3E%3C/svg%3E");
+    background-size: 360px 360px;
+    animation: drift 50s linear infinite;
+    pointer-events: none;
+}
+
+@keyframes drift {
+    from { transform: translateY(0); }
+    to { transform: translateY(-360px); }
+}
+
+/* glass card */
+.card {
+    position: relative;
+    width: 100%;
+    max-width: 380px;
+    padding: 22px;
+    border-radius: 16px;
+
+    background: rgba(20, 40, 32, 0.55);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+
+    border: 1px solid rgba(140, 220, 185, 0.45);
+    box-shadow:
+        0 10px 30px rgba(0,0,0,0.25),
+        inset 0 0 0 1px rgba(255,255,255,0.04);
+
+    transition: transform 0.25s ease;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+}
+
+h2 {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0 0 6px;
+}
+
+.subtitle {
+    font-size: 13px;
+    color: #b6d6c6;
+    margin-bottom: 16px;
+}
+
+.upload-btn {
+    width: 100%;
+    padding: 10px;
+    background: rgba(90,169,135,0.15);
+    color: #e8f6ef;
+    border: 1px solid rgba(140,220,185,0.6);
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.2s ease, border-color 0.2s ease;
+    text-align: center;
+}
+
+.upload-btn:hover {
+    background: rgba(90,169,135,0.25);
+    border-color: rgba(160,240,205,0.9);
+}
+
+input[type="file"] { display: none; }
+
+.preview {
+    margin-top: 14px;
+    display: none;
+}
+
+.preview img {
+    width: 100%;
+    border-radius: 12px;
+    border: 1px solid rgba(140,220,185,0.35);
+}
+
+#result {
+    margin-top: 14px;
+    font-size: 14px;
+}
+
+.label {
+    display: inline-block;
+    padding: 6px 14px;
+    border: 1px solid rgba(160,240,205,0.85);
+    border-radius: 999px;
+    font-weight: 500;
+    margin-bottom: 4px;
+}
+
+.confidence {
+    font-size: 13px;
+    color: #b6d6c6;
+}
+
+.footer {
+    margin-top: 14px;
+    font-size: 11px;
+    color: #8fb7a4;
+    text-align: center;
+}
+</style>
+</head>
+
+<body>
+
+<div class="card">
+    <h2>Image Check</h2>
+    <div class="subtitle">Upload an image to continue</div>
+
+    <label class="upload-btn">
+        Choose Image
+        <input type="file" accept="image/*" onchange="predictImage(event)">
+    </label>
+
+    <div class="preview" id="previewBox">
+        <img id="preview">
+    </div>
+
+    <div id="result"></div>
+
+    <div class="footer">By Jason Timothy Tanuwijaya</div>
+</div>
+
+<script>
+const MODEL_URL = "https://teachablemachine.withgoogle.com/models/7peZP1TMX/";
+let model;
+
+async function loadModel() {
+    model = await tmImage.load(
+        MODEL_URL + "model.json",
+        MODEL_URL + "metadata.json"
+    );
+}
+loadModel();
+
+async function predictImage(event) {
+    if (!model) return;
+
+    const img = document.getElementById("preview");
+    const previewBox = document.getElementById("previewBox");
+    const result = document.getElementById("result");
+
+    img.src = URL.createObjectURL(event.target.files[0]);
+    previewBox.style.display = "block";
+    result.textContent = "Processing...";
+
+    img.onload = async () => {
+        const predictions = await model.predict(img);
+        const best = predictions.reduce((a, b) =>
+            a.probability > b.probability ? a : b
+        );
+
+        result.innerHTML = `
+            <div class="label">${best.className}</div><br>
+            <div class="confidence">${(best.probability * 100).toFixed(1)}%</div>
+        `;
+    };
+}
+</script>
+
+</body>
+</html>
