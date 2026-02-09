@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Image Check</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.12.0/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8/dist/teachablemachine-image.min.js"></script>
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+* { box-sizing: border-box; }
+
+body {
+    font-family: 'Inter', sans-serif;
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    color: #e6f1eb;
+    background: #0f1f17;
+    overflow: hidden;
+}
+
+/* animated wavy background */
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cpath d='M0 60 Q 75 40 150 60 T 300 60' fill='none' stroke='rgba(255,255,255,0.04)' stroke-width='2'/%3E%3Cpath d='M0 150 Q 75 130 150 150 T 300 150' fill='none' stroke='rgba(255,255,255,0.03)' stroke-width='2'/%3E%3Cpath d='M0 240 Q 75 220 150 240 T 300 240' fill='none' stroke='rgba(255,255,255,0.02)' stroke-width='2'/%3E%3C/svg%3E");
+    background-size: 320px 320px;
+    animation: drift 40s linear infinite;
+    pointer-events: none;
+}
+
+@keyframes drift {
+    from { transform: translateY(0); }
+    to { transform: translateY(-320px); }
+}
+
+.card {
+    position: relative;
+    width: 100%;
+    max-width: 380px;
+    padding: 22px;
+    border-radius: 14px;
+    background: rgba(20,40,32,0.92);
+    border: 1px solid #5aa987;
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 0 1px rgba(122,219,180,0.25);
+}
+
+h2 {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0 0 6px;
+}
+
+.subtitle {
+    font-size: 13px;
+    color: #a8c6b6;
+    margin-bottom: 16px;
+}
+
+.upload-btn {
+    width: 100%;
+    padding: 10px;
+    background: transparent;
+    color: #dff3ea;
+    border: 1px solid #5aa987;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s ease;
+    text-align: center;
+}
+
+.upload-btn:hover {
+    background: rgba(90,169,135,0.15);
+    letter-spacing: 0.2px;
+}
+
+input[type="file"] { display: none; }
+
+.preview {
+    margin-top: 14px;
+    display: none;
+}
+
+.preview img {
+    width: 100%;
+    border-radius: 10px;
+    border: 1px solid #2f5a45;
+}
+
+#result {
+    margin-top: 14px;
+    font-size: 14px;
+}
+
+.label {
+    display: inline-block;
+    padding: 6px 12px;
+    border: 1px solid #7ed8b2;
+    border-radius: 999px;
+    font-weight: 500;
+    margin-bottom: 4px;
+}
+
+.confidence {
+    font-size: 13px;
+    color: #a8c6b6;
+}
+
+.footer {
+    margin-top: 14px;
+    font-size: 11px;
+    color: #7f9f90;
+    text-align: center;
+}
+</style>
+</head>
+
+<body>
+
+<div class="card">
+    <h2>leaf check</h2>
+    <div class="subtitle">Upload an image to continue</div>
+
+    <label class="upload-btn">
+        Choose Image
+        <input type="file" accept="image/*" onchange="predictImage(event)">
+    </label>
+
+    <div class="preview" id="previewBox">
+        <img id="preview">
+    </div>
+
+    <div id="result"></div>
+
+    <div class="footer">v.67</div>
+</div>
+
+<script>
+const MODEL_URL = "https://teachablemachine.withgoogle.com/models/7peZP1TMX/";
+let model;
+
+async function loadModel() {
+    model = await tmImage.load(
+        MODEL_URL + "model.json",
+        MODEL_URL + "metadata.json"
+    );
+}
+loadModel();
+
+async function predictImage(event) {
+    if (!model) return;
+
+    const img = document.getElementById("preview");
+    const previewBox = document.getElementById("previewBox");
+    const result = document.getElementById("result");
+
+    img.src = URL.createObjectURL(event.target.files[0]);
+    previewBox.style.display = "block";
+    result.textContent = "Processing...";
+
+    img.onload = async () => {
+        const predictions = await model.predict(img);
+        const best = predictions.reduce((a, b) =>
+            a.probability > b.probability ? a : b
+        );
+
+        result.innerHTML = `
+            <div class="label">${best.className}</div><br>
+            <div class="confidence">${(best.probability * 100).toFixed(1)}%</div>
+        `;
+    };
+}
+</script>
+
+</body>
+</html>
